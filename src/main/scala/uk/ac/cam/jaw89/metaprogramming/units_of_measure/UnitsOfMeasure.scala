@@ -1,5 +1,7 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
+import scala.reflect.ClassTag
+
 object UnitsOfMeasure {
   import scala.language.implicitConversions
 
@@ -15,18 +17,40 @@ object UnitsOfMeasure {
   def mapCombine[A, B](x: Map[A, B], y: Map[A, B])(implicit num: Numeric[B]): Map[A, B] = mapCombine(x, y, num.one)
 
   /**
+    * A class that has corresponding dimensions
+    *
+    * @tparam A The self type -- {@see http://en.wikipedia.org/wiki/Curiously_recurring_template_pattern}
+    * @tparam B The type of the dimensions
+    */
+  trait Dimensioned[A <: Dimensioned[A, B], B] {
+    protected def mult(other: A): Map[B, Int] = mapCombine(dimensionMap, other.dimensionMap)
+    protected def div(other: A): Map[B, Int] = mapCombine(dimensionMap, other.dimensionMap, -1)
+    protected def pow(power: Int): Map[B, Int] = dimensionMap.mapValues(v => v * power)
+
+    protected def normalise(dimensions: Map[B, Int]): Map[B, Int] = dimensions.filter(e => e._2 != 0)
+
+    def *(other: A): A
+    def /(other: A): A
+    def ~^(power: Int): A
+    protected def dimensionMap: Map[B, Int]
+
+    override def hashCode(): Int = dimensionMap.hashCode()
+
+    override def toString: String = dimensionMap.map(e => e._1.toString + (if (e._2 == 1) "" else "^" + e._2.toString)).mkString(" ")
+  }
+
+  /**
     * A dimension (a unit's "type")
     *
     * Acceleration is represented by Dimension(Distance -> 1, Time -> -2)
     */
-  class Dimension private[UnitsOfMeasure] (dimensions: Map[BaseDimension, Int]) {
-    val baseDimensions: Map[BaseDimension, Int] = normalise(dimensions)
+  class Dimension protected (_dimensions: Map[BaseDimension, Int]) extends Dimensioned[Dimension, BaseDimension] {
+    val baseDimensions: Map[BaseDimension, Int] = normalise(_dimensions)
 
-    def *(other: Dimension): Dimension = new Dimension(mapCombine(baseDimensions, other.baseDimensions))
-    def /(other: Dimension): Dimension = new Dimension(mapCombine(baseDimensions, other.baseDimensions, -1))
-    def ~^(power: Int): Dimension = new Dimension(baseDimensions.mapValues(v => v * power))
-
-    private def normalise(dimensions: Map[BaseDimension, Int]): Map[BaseDimension, Int] = dimensions.filter(e => e._2 != 0)
+    override protected def dimensionMap: Map[BaseDimension, Int] = baseDimensions
+    override def *(other: Dimension): Dimension = new Dimension(mult(other))
+    override def /(other: Dimension): Dimension = new Dimension(div(other))
+    override def ~^(power: Int): Dimension = new Dimension(pow(power))
 
     def this(baseDimension: BaseDimension) = this(Map(baseDimension -> 1))
     private[UnitsOfMeasure] def this() = this(Map[BaseDimension, Int]())
@@ -37,10 +61,6 @@ object UnitsOfMeasure {
         case _ => false
       }
     }
-
-    override def hashCode(): Int = baseDimensions.hashCode()
-
-    override def toString: String = dimensions.map(e => e._1.toString + (if (e._2 == 1) "" else "^" + e._2.toString)).mkString(" ")
   }
 
   /**
@@ -63,44 +83,105 @@ object UnitsOfMeasure {
   case object LuminousIntensity extends BaseDimension("LuminousIntensity")
 
   /**
+    * A user-defined unit
+    *
+    * @param dimension The dimensionality of this unit
+    * @param symbol The symbol for this unit, such as `m`
+    */
+  case class DefinedUnit private (dimension: Dimension, symbol: String) {
+
+    /**
+      * A dependent type, to allow differentiating between units at a type level
+      */
+    object Foo
+
+    override def toString: String = symbol
+  }
+
+  /**
     * A unit is a particular scale of a dimension
     *
     * @param dimension The dimension that this unit is for (eg hectares are Length^2^)
-    * @param name The display name for this variable
-    * @param scale The scale of this unit compared to the SI base unit for the dimension (or combination of base units
-    *              for composite dimensions)
+    * @param _baseUnits The manually user-created units that this unit is defined in terms of
     */
-  case class UnitOfMeasure(dimension: Dimension, name: String, scale: Double) {
-    override def toString: String = name
+  case class UnitOfMeasure protected (dimension: Dimension, _baseUnits: Map[DefinedUnit, Int]) extends Dimensioned[UnitOfMeasure, DefinedUnit] {
+    val baseUnits: Map[DefinedUnit, Int] = normalise(_baseUnits)
 
-    def *(other: UnitOfMeasure): UnitOfMeasure = new UnitOfMeasure(dimension * other.dimension, name + " " + other.name, scale * other.scale)
-    def /(other: UnitOfMeasure): UnitOfMeasure = new UnitOfMeasure(dimension / other.dimension, name + "/" + other.name, scale / other.scale)
-    def ~^(power: Integer): UnitOfMeasure = new UnitOfMeasure(dimension ~^ power, s"($name)^$power", scala.math.pow(scale, power.toDouble))
+    override def *(other: UnitOfMeasure): UnitOfMeasure = new UnitOfMeasure(dimension * other.dimension, mult(other))
+    override def /(other: UnitOfMeasure): UnitOfMeasure = new UnitOfMeasure(dimension / other.dimension, div(other))
+    override def ~^(power: Int): UnitOfMeasure = new UnitOfMeasure(dimension ~^ 2, pow(power))
 
-    def apply(other: UnitOfMeasure): UnitOfMeasure = this * other
+    override protected def dimensionMap: Map[DefinedUnit, Int] = baseUnits
+
+    private[UnitsOfMeasure] def this() = this(Dimensionless, Map[DefinedUnit, Int]())
+
+    override def equals(obj: Any): Boolean = {
+      obj match {
+        case other: UnitOfMeasure => baseUnits.equals(other.baseUnits)
+        case _ => false
+      }
+    }
+  }
+
+  object UnitOfMeasure {
+    // apply creates a new DefinedUnit, and corresponding UnitOfMeasure
+    def apply(dimension: Dimension, symbol: String): UnitOfMeasure = new UnitOfMeasure(dimension, Map(DefinedUnit(dimension, symbol) -> 1))
   }
 
 
-  val DimensionlessUnit = new UnitOfMeasure(Dimensionless, "", 1)
+  val DimensionlessUnit = new UnitOfMeasure()
 
   /**
     * A value with associated unit
-    * @param value
-    * @param unit
-    * @tparam A
+    *
+    * @param value The numeric value of this measure
+    * @param unit The unit of this measure
+    * @tparam A The type of the value
     */
   class Val[A](val value: A, val unit: UnitOfMeasure) {
-    def +(other: Val[A])(implicit num: Numeric[A]): Val[A] = if (unit == other.unit) {
+    def +(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.plus(value, other.as(unit).value), unit)
+    def -(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.minus(value, other.as(unit).value), unit)
+    def *(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.times(value, other.value), unit * other.unit)
+    def /(other: Val[A])(implicit num: Fractional[A]): Val[A] = new Val[A](num.div(value, other.value), unit / other.unit)
+
+    def unary_-(implicit num: Numeric[A]): Val[A] = new Val[A](num.negate(value), unit)
+
+    /**
+      * Convert from to a different unit, with the same dimensionality
+      *
+      * @param targetUnit The unit to convert to
+      * @return The new Val[A], scaled to the new units
+      * @throws DimensionError If the unit has a different dimensionality
+      */
+    def as(targetUnit: UnitOfMeasure): Val[A] = if (unit == targetUnit) {
       // If units are the same, we're done
-      new Val[A](num.plus(value, other.value), unit)
-    } else if (unit.dimension == other.unit.dimension) {
+      this
+    } else if (unit.dimension == targetUnit.dimension) {
       // If dimensions are the same but units are not, we need to do a bit more work
       ???
     } else {
-      throw DimensionError(unit.dimension, other.unit.dimension)
+      throw DimensionError(unit.dimension, targetUnit.dimension)
     }
 
     override def toString: String = value.toString + " " + unit.toString
+
+    /**
+      * Do the two values represent the same measurement?
+      */
+    override def equals(obj: Any): Boolean = {
+      obj match {
+        case other: Val[_] => value == other.as(unit).value
+        case _ => false
+      }
+    }
+
+    /**
+      * Are the two values exactly the same (same value and units)
+      */
+    def ===(other: Val[A]): Boolean = value == other.value && unit == other.unit
+  }
+  object Val {
+    def apply[A](value: A, unit: UnitOfMeasure): Val[A] = new Val[A](value, unit)
   }
 
   /**
@@ -117,9 +198,10 @@ object UnitsOfMeasure {
 
   /**
     * Implicitly convert a raw value to a dimensionless value, so that it can be used
-    * @param v
-    * @tparam A
-    * @return
+    *
+    * @param v The value to convert
+    * @tparam A The type of the value
+    * @return A dimensionless and unitless Val[A]
     */
   implicit def convertValueToDimensionlessVal[A](v: A): Val[A] = new Val[A](v, DimensionlessUnit)
 }
@@ -129,8 +211,8 @@ object Tests {
   import UnitsOfMeasure._
 
   def main(args: Array[String]): Unit = {
-    val m = UnitOfMeasure(Length, "m", 1)
-    val v = new Val(5, m(m))
+    val m = UnitOfMeasure(Length, "m")
+    val v = new Val(5, m * m)
     println(v)
   }
 }
