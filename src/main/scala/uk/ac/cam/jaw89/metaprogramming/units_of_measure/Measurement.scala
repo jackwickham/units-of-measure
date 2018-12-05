@@ -15,6 +15,7 @@ class Measurement[A](val value: A, val unit: DerivedUnit) {
   def /(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.div(value, other.value), unit / other.unit)
 
   def ~^(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.pow(value, power), unit ~^ power)
+  def ~^-(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = this ~^ -power
 
   def unary_-(implicit num: Numeric[A]): Measurement[A] = new Measurement[A](num.negate(value), unit)
 
@@ -58,19 +59,17 @@ class Measurement[A](val value: A, val unit: DerivedUnit) {
     * Do the two values represent the same measurement?
     */
   def =~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = value == other.as(unit).value
+
+  /**
+    * Do two values represent different measurements?
+    */
+  def !=~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = !(this =~ other)
 }
 
 object Measurement {
   import scala.language.implicitConversions
 
   def apply[A](value: A, unit: DerivedUnit): Measurement[A] = new Measurement[A](value, unit)
-
-  /**
-    * Extend values to allow them to be applied to a unit, so you can do 100(m) rather than Measurement(100, m)
-    */
-  implicit class ValueUnitApplication[A](private val a: A) extends AnyVal {
-    def apply(unit: DerivedUnit): Measurement[A] = new Measurement(a, unit)
-  }
 
   /**
     * Implicitly convert a raw value to a dimensionless measurement, so that it can be used

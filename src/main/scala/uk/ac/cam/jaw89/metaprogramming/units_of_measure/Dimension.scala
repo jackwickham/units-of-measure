@@ -14,6 +14,7 @@ class Dimension private (_dimensions: PowersOf[BaseDimension]) extends Dimension
   override def *(other: Dimension): Dimension = new Dimension(mult(other))
   override def /(other: Dimension): Dimension = new Dimension(div(other))
   override def ~^(power: Exponent): Dimension = new Dimension(pow(power))
+  def ~^-(power: Exponent): Dimension = new Dimension(pow(-power))
 
   def this(baseDimension: BaseDimension) = this(PowersOf(baseDimension -> 1))
 

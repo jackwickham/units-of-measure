@@ -56,6 +56,14 @@ package object units_of_measure {
   private[units_of_measure] def mapCombine[A, B](x: Map[A, B], y: Map[A, B])(implicit num: Numeric[B]): Map[A, B] = mapCombine(x, y, num.one)
 
 
+  /**
+    * Extend values to allow them to be applied to a unit, so you can do 100(m) rather than Measurement(100, m)
+    */
+  implicit class ValueUnitApplication[A](private val a: A) extends AnyVal {
+    def apply(unit: DerivedUnit): Measurement[A] = new Measurement(a, unit)
+  }
+
+
   //// Re-export some useful methods ////
 
   /**
