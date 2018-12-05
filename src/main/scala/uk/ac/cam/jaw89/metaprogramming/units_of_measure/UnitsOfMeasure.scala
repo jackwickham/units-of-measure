@@ -1,5 +1,8 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
+import scala.math.Numeric.DoubleIsFractional
+import scala.math.Ordering.DoubleOrdering
+
 object UnitsOfMeasure {
   import scala.language.implicitConversions
 
@@ -8,11 +11,21 @@ object UnitsOfMeasure {
     * For now, only allow integer powers. Non-integer (and even irrational) powers are possible, but generally rare
     */
   private type Exponent = Int
+
+  /**
+    * Alias a term as a map from (thing being raised to the power) to Exponent
+    */
   private type PowersOf[T] = Map[T, Exponent]
 
   object PowersOf {
     def apply[T](elems: (T, Exponent)*): PowersOf[T] = Map.apply[T, Exponent](elems: _*)
   }
+
+  /**
+    * For now, only allow unit multipliers to be defined as doubles. I can't think of a time when that won't be suitable.
+    * Most multipliers will actually be powers of 10 (or 2), and we want to be able to easily multiply it by the values.
+    */
+  private type Multiplier = Double
 
 
   /**
@@ -128,7 +141,7 @@ object UnitsOfMeasure {
     * @param baseUnits The base units that this name is defined in terms of
     * @param multiplier The multiplier relative to the base units
     */
-  case class NamedUnit[A] private[UnitsOfMeasure] (symbol: String, baseUnits: PowersOf[BaseUnit], multiplier: Option[A] = None) {
+  case class NamedUnit private[UnitsOfMeasure] (symbol: String, baseUnits: PowersOf[BaseUnit], multiplier: Multiplier = 1.0) {
     override def toString: String = symbol
 
     /**
@@ -146,13 +159,15 @@ object UnitsOfMeasure {
     *              stringified version of this unit)
     * @param multiplier The ratio between this unit and the base units, or None to signify 1 (when A may be unknown)
     */
-  case class DerivedUnit[A] private (units: PowersOf[NamedUnit[A]], multiplier: Option[A] = None) extends Dimensioned[DerivedUnit[A], NamedUnit[A]] {
-    override def *(other: DerivedUnit[A]): DerivedUnit[A] = DerivedUnit(mult(other))
-    override def /(other: DerivedUnit[A]): DerivedUnit[A] = DerivedUnit(div(other))
-    override def ~^(power: Exponent): DerivedUnit[A] = DerivedUnit(pow(power))
-    def ~^-(power: Exponent): DerivedUnit[A] = DerivedUnit(pow(-power))
+  case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Multiplier = 1.0) extends Dimensioned[DerivedUnit, NamedUnit] {
+    override def *(other: DerivedUnit): DerivedUnit = DerivedUnit(mult(other), multiplier * other.multiplier)
+    override def /(other: DerivedUnit): DerivedUnit = DerivedUnit(div(other), multiplier / other.multiplier)
+    override def ~^(power: Exponent): DerivedUnit = DerivedUnit(pow(power), math.pow(multiplier, power))
+    def ~^-(power: Exponent): DerivedUnit = DerivedUnit(pow(-power))
 
-    override protected def dimensionMap: PowersOf[NamedUnit[A]] = units
+    def *(mult: Multiplier): DerivedUnit = DerivedUnit(units, multiplier * mult)
+
+    override protected def dimensionMap: PowersOf[NamedUnit] = units
 
     /**
       * Get the dimensions represented by this unit
@@ -171,26 +186,10 @@ object UnitsOfMeasure {
     /**
       * Get the multiplier of this unit compared to the base units
       *
-      * @param numeric A Numeric helper
-      * @param power A power function that allows a multiplier to be raised to a power of type Exponent
       * @return The multiplier for this unit
       */
-    def baseMultiplier(implicit nwop: Option[NumericWithOptionalPower[A, Exponent]]): Option[A] = nwop match {
-      case Some(NumericWithOptionalPower(numeric, Some(power))) => Some(units.foldLeft(multiplier.getOrElse(numeric.one)) {
-        case (acc, (NamedUnit(_, _, m), p)) => numeric.plus(acc, power(m.getOrElse(numeric.one), p))
-      })
-      case Some(NumericWithOptionalPower(numeric, None)) => Some(units.foldLeft(multiplier.getOrElse(numeric.one)) {
-        case (acc, (NamedUnit(_, _, m), p)) => if (m.isEmpty || m == numeric.one || p == 1) {
-          numeric.plus(acc, m.asInstanceOf[Option[A]].getOrElse(numeric.one))
-        } else {
-          throw new RuntimeException("An implicit power function of type (A, Exponent) => A must be provided if using non-default multipliers")
-        }
-      })
-      case None => if (multiplier.isEmpty && units.forall(u => u._1.multiplier.isEmpty)) {
-        None
-      } else {
-        throw new RuntimeException("An implicit Numeric[A] is required if using non-default multipliers")
-      }
+    def baseMultiplier: Multiplier = units.foldLeft(multiplier) {
+        case (acc, (NamedUnit(_, _, m), p)) => acc * math.pow(m, p)
     }
 
     /**
@@ -201,16 +200,17 @@ object UnitsOfMeasure {
       * @param power A power function that allows a multiplier to be raised to the power of type Exponent
       * @return The new DerivedUnit
       */
-    def alias(symbol: String)(implicit nwop: Option[NumericWithOptionalPower[A, Exponent]]): DerivedUnit[A] =
-      DerivedUnit[A](PowersOf(NamedUnit[A](symbol, baseUnits) -> 1), baseMultiplier(nwop))
+    def alias(symbol: String): DerivedUnit = DerivedUnit(PowersOf(NamedUnit(symbol, baseUnits, baseMultiplier) -> 1))
 
-    private[UnitsOfMeasure] def this() = this(PowersOf[NamedUnit[A]]())
+    private[UnitsOfMeasure] def this() = this(PowersOf[NamedUnit]())
+
+    override def toString: String = super.toString + (if (multiplier != 1.0) " * " + multiplier else "")
   }
 
 
-  val DimensionlessUnit = new DerivedUnit[Any]()
+  val DimensionlessUnit = new DerivedUnit()
 
-  def defineUnit(symbol: String, dimensions: Dimension): DerivedUnit[Any] = DerivedUnit(PowersOf(NamedUnit[Any](symbol, PowersOf(BaseUnit(dimensions) -> 1)) -> 1))
+  def defineUnit(symbol: String, dimensions: Dimension): DerivedUnit = DerivedUnit(PowersOf(NamedUnit(symbol, PowersOf(BaseUnit(dimensions) -> 1)) -> 1))
 
   /**
     * A value with associated unit
@@ -219,14 +219,14 @@ object UnitsOfMeasure {
     * @param unit The unit of this measure
     * @tparam A The type of the value
     */
-  class Val[A](val value: A, val unit: DerivedUnit[A]) {
-    def +(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.plus(value, other.as(unit).value), unit)
-    def -(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.minus(value, other.as(unit).value), unit)
-    def *(other: Val[A])(implicit num: Numeric[A]): Val[A] = new Val[A](num.times(value, other.value), unit * other.unit)
-    def /(other: Val[A])(implicit num: Fractional[A]): Val[A] = new Val[A](num.div(value, other.value), unit / other.unit)
-    def ~^(power: Exponent)(implicit num: Fractional[A]): Val[A] = ???
+  class Measurement[A](val value: A, val unit: DerivedUnit) {
+    def +(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.plus(value, other.as(unit).value), unit)
+    def -(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.minus(value, other.as(unit).value), unit)
+    def *(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.times(value, other.value), unit * other.unit)
+    def /(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.div(value, other.value), unit / other.unit)
+    def ~^(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.pow(value, power), unit ~^ power)
 
-    def unary_-(implicit num: Numeric[A]): Val[A] = new Val[A](num.negate(value), unit)
+    def unary_-(implicit num: Numeric[A]): Measurement[A] = new Measurement[A](num.negate(value), unit)
 
     /**
       * Convert from to a different unit, with the same dimensionality
@@ -235,39 +235,39 @@ object UnitsOfMeasure {
       * @return The new Val[A], scaled to the new units
       * @throws DimensionError If the unit has a different dimensionality
       */
-    // TODO: Power is nasty and messes stuff up
-    def as(targetUnit: DerivedUnit[A])(implicit nwop: NumericWithOptionalPower[A, Exponent]): Val[A] = if (unit == targetUnit) {
+    def as(targetUnit: DerivedUnit)(implicit numeric: MeasurementOperators[A]): Measurement[A] = if (unit == targetUnit) {
       // If units are the same, we're done
       this
     } else if (unit.baseUnits == targetUnit.baseUnits) {
-      // If dimensions are the same but units are not, we need to do a bit more work
-      // TODO: Division is needed
-      Val(nwop.numeric.times(value, targetUnit.baseMultiplier(Some(nwop)).getOrElse(nwop.numeric.one)), targetUnit)
+      // If dimensions are the same but units are not, we need to use the ratio between their multiplier
+      new Measurement(numeric.div(numeric.times(value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
     } else if (unit.dimensions == targetUnit.dimensions) {
       throw UnitConversionException(unit, targetUnit)
     } else {
       throw DimensionError(unit.dimensions, targetUnit.dimensions)
     }
 
-    override def toString: String = value.toString + " " + unit.toString
+    def in(targetUnit: DerivedUnit)(implicit numeric: MeasurementOperators[A]): Measurement[A] = as(targetUnit)(numeric)
 
-    /**
-      * Do the two values represent the same measurement?
-      */
-    /*override def equals(obj: Any): Boolean = {
-      obj match {
-        case other: Val[A] => value == other.as(unit).value // TODO: wants implicits
-        case _ => false
-      }
-    }*/
+    override def toString: String = value.toString + " " + unit.toString
 
     /**
       * Are the two values exactly the same (same value and units)
       */
-    def ===(other: Val[A]): Boolean = value == other.value && unit == other.unit
+    override def equals(obj: Any): Boolean = {
+      obj match {
+        case other: Measurement[A] => unit == other.unit && value == other.value
+        case _ => false
+      }
+    }
+
+    /**
+      * Do the two values represent the same measurement?
+      */
+    def =~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = value == other.as(unit).value
   }
-  object Val {
-    def apply[A](value: A, unit: DerivedUnit[A]): Val[A] = new Val[A](value, unit)
+  object Measurement {
+    def apply[A](value: A, unit: DerivedUnit): Measurement[A] = new Measurement[A](value, unit)
   }
 
   /**
@@ -275,7 +275,7 @@ object UnitsOfMeasure {
     */
   class UnitsOfMeasureException(private val message: String = "", private val cause: Throwable = None.orNull) extends RuntimeException(message, cause)
   case class DimensionError(left: Dimension, right: Dimension) extends UnitsOfMeasureException(s"Expected $left, but got $right")
-  case class UnitConversionException(left: DerivedUnit[_], right: DerivedUnit[_]) extends UnitsOfMeasureException(s"Failed to convert from $left to $right - the base units are different (use alias rather than defineUnit)")
+  case class UnitConversionException(left: DerivedUnit, right: DerivedUnit) extends UnitsOfMeasureException(s"Failed to convert from $left to $right - the base units are different (use alias rather than defineUnit)")
 
   /**
     * Implicitly convert BaseDimension to Dimension, to make it easier to use
@@ -289,16 +289,35 @@ object UnitsOfMeasure {
     * @tparam A The type of the value
     * @return A dimensionless and unitless Val[A]
     */
-  implicit def convertValueToDimensionlessVal[A](v: A): Val[A] = new Val[A](v, DimensionlessUnit.asInstanceOf[DerivedUnit[A]])
+  implicit def convertValueToDimensionlessVal[A](v: A): Measurement[A] = new Measurement[A](v, DimensionlessUnit.asInstanceOf[DerivedUnit])
 
+  trait MeasurementOperators[A] extends Fractional[A] {
+    def times(x: A, y: Multiplier): A
+    def div(x: A, y: Multiplier): A
 
-  object NumericWithOptionalPower {
-    implicit def fromNumericAndPower[A, E](implicit numeric: Numeric[A], power: (A, E) => A): NumericWithOptionalPower[A, E] =
-      NumericWithOptionalPower(numeric, Some(power))
-    implicit def fromNumeric[A, E](implicit numeric: Numeric[A]): NumericWithOptionalPower[A, E] =
-      NumericWithOptionalPower(numeric, None)
+    /**
+      * Naive integer power algorithm using multiplication and division
+      *
+      * @param x Value to raise to a power
+      * @param y Power to raise it to
+      * @return x^y^
+      */
+    def pow(x: A, y: Exponent): A = {
+      var r: A = one
+      if (y < 0) {
+        for (_ <- 0 until -y) {
+          r = div(r, x)
+        }
+      } else {
+        for (_ <- 0 until y) {
+          r = times(r, x)
+        }
+      }
+      r
+    }
   }
-  case class NumericWithOptionalPower[A, E](numeric: Numeric[A], power: Option[(A, E) => A])
+
+  implicit object MultiplierMeasurementOperators extends DoubleIsFractional with MeasurementOperators[Multiplier] with DoubleOrdering
 }
 
 
@@ -307,7 +326,7 @@ object Tests {
 
   def main(args: Array[String]): Unit = {
     val m = defineUnit("m", Length)
-    val v = new Val(5, m * m)
+    val v = new Measurement(5, m * m)
     println(v)
   }
 }
