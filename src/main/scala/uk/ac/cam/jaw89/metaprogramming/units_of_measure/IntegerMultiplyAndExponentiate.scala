@@ -3,7 +3,7 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 import scala.math.Numeric.DoubleIsFractional
 import scala.math.Ordering.DoubleOrdering
 
-trait MeasurementOperators[A] extends Fractional[A] {
+trait IntegerMultiplyAndExponentiate[A] {
   def times(x: A, y: Multiplier): A
   def div(x: A, y: Multiplier): A
 
@@ -14,25 +14,25 @@ trait MeasurementOperators[A] extends Fractional[A] {
     * @param y Power to raise it to
     * @return x^y^
     */
-  def pow(x: A, y: Exponent): A = {
-    var r: A = one
+  def pow(x: A, y: Exponent)(implicit frac: Fractional[A]): A = {
+    var r: A = frac.one
     if (y < 0) {
       for (_ <- 0 until -y) {
-        r = div(r, x)
+        r = frac.div(r, x)
       }
     } else {
       for (_ <- 0 until y) {
-        r = times(r, x)
+        r = frac.times(r, x)
       }
     }
     r
   }
 }
 
-object MeasurementOperators {
+object IntegerMultiplyAndExponentiate {
 
   /**
     * Provide an instance of MeasurementOperators when using Double
     */
-  implicit object MultiplierMeasurementOperators extends DoubleIsFractional with MeasurementOperators[Double] with DoubleOrdering
+  implicit object MultiplierIntegerMultiplyAndExponentiate$Double extends DoubleIsFractional with IntegerMultiplyAndExponentiate[Double] with DoubleOrdering
 }

@@ -7,7 +7,7 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
   *              stringified version of this unit)
   * @param multiplier The ratio between this unit and the base units, or None to signify 1 (when A may be unknown)
   */
-case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Multiplier = 1.0) extends Dimensioned[DerivedUnit, NamedUnit] {
+final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Multiplier = 1.0) extends Dimensioned[DerivedUnit, NamedUnit] {
   override def *(other: DerivedUnit): DerivedUnit = DerivedUnit(mult(other), multiplier * other.multiplier)
   override def /(other: DerivedUnit): DerivedUnit = DerivedUnit(div(other), multiplier / other.multiplier)
   override def ~^(power: Exponent): DerivedUnit = DerivedUnit(pow(power), math.pow(multiplier, power))
