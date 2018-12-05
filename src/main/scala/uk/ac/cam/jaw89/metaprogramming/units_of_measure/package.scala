@@ -55,4 +55,15 @@ package object units_of_measure {
     */
   private[units_of_measure] def mapCombine[A, B](x: Map[A, B], y: Map[A, B])(implicit num: Numeric[B]): Map[A, B] = mapCombine(x, y, num.one)
 
+
+  //// Re-export some useful methods ////
+
+  /**
+    * Define a new unit, which isn't related to any previously defined units
+    *
+    * @param symbol The symbol for this unit, such as m or kg
+    * @param dimensions The dimensionality of this unit
+    * @return A new DerivedUnit representing 1 of the new unit
+    */
+  def defineUnit(symbol: String, dimensions: Dimension): DerivedUnit = DerivedUnit.defineUnit(symbol, dimensions)
 }
