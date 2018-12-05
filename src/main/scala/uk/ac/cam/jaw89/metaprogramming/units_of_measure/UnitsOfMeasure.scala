@@ -212,6 +212,15 @@ object UnitsOfMeasure {
 
   def defineUnit(symbol: String, dimensions: Dimension): DerivedUnit = DerivedUnit(PowersOf(NamedUnit(symbol, PowersOf(BaseUnit(dimensions) -> 1)) -> 1))
 
+
+  /**
+    * Extend Multiplier (= Double) so that it can be pre-multiplied by a unit to produce a new unit, such as
+    * minute = 60 * second
+    */
+  implicit class PrefixMultiplier(private val a: Multiplier) extends AnyVal {
+    def *(original: DerivedUnit): DerivedUnit = DerivedUnit(original.units, a * original.multiplier)
+  }
+
   /**
     * A value with associated unit
     *
@@ -268,6 +277,14 @@ object UnitsOfMeasure {
   }
   object Measurement {
     def apply[A](value: A, unit: DerivedUnit): Measurement[A] = new Measurement[A](value, unit)
+  }
+
+
+  /**
+    * Extend values to allow
+    */
+  implicit class ValueUnitApplication[A](private val a: A) extends AnyVal {
+    def apply(unit: DerivedUnit): Measurement[A] = new Measurement(a, unit)
   }
 
   /**
