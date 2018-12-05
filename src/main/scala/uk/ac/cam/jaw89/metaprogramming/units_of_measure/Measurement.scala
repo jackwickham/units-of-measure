@@ -4,20 +4,20 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 /**
   * A value with associated unit
   *
-  * @param value The numeric value of this measure
+  * @param _value The numeric value of this measure
   * @param unit The unit of this measure
   * @tparam A The type of the value
   */
-class Measurement[A](val value: A, val unit: DerivedUnit) {
-  def +(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.plus(value, other.as(unit).value), unit)
-  def -(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.minus(value, other.as(unit).value), unit)
-  def *(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.times(value, other.value), unit * other.unit)
-  def /(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.div(value, other.value), unit / other.unit)
+class Measurement[A](private val _value: A, val unit: DerivedUnit) {
+  def +(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.plus(_value, other.as(unit)._value), unit)
+  def -(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.minus(_value, other.as(unit)._value), unit)
+  def *(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.times(_value, other._value), unit * other.unit)
+  def /(other: Measurement[A])(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.div(_value, other._value), unit / other.unit)
 
-  def ~^(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.pow(value, power), unit ~^ power)
+  def ~^(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = new Measurement[A](num.pow(_value, power), unit ~^ power)
   def ~^-(power: Exponent)(implicit num: MeasurementOperators[A]): Measurement[A] = this ~^ -power
 
-  def unary_-(implicit num: Numeric[A]): Measurement[A] = new Measurement[A](num.negate(value), unit)
+  def unary_-(implicit num: Numeric[A]): Measurement[A] = new Measurement[A](num.negate(_value), unit)
 
   /**
     * Convert from to a different unit, with the same dimensionality
@@ -31,7 +31,7 @@ class Measurement[A](val value: A, val unit: DerivedUnit) {
     this
   } else if (unit.baseUnits == targetUnit.baseUnits) {
     // If dimensions are the same but units are not, we need to use the ratio between their multiplier
-    new Measurement(numeric.div(numeric.times(value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
+    new Measurement(numeric.div(numeric.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
     throw UnitConversionException(unit, targetUnit)
   } else {
@@ -43,14 +43,21 @@ class Measurement[A](val value: A, val unit: DerivedUnit) {
     */
   def in(targetUnit: DerivedUnit)(implicit numeric: MeasurementOperators[A]): Measurement[A] = as(targetUnit)(numeric)
 
-  override def toString: String = value.toString + " " + unit.toString
+  /**
+    * Get the value in a particular unit
+    *
+    * @param desiredUnit The unit that the value should be in
+    * @param numeric Measurement operators to use to calculate the values
+    * @return The value, converted to the desired unit
+    */
+  def value(desiredUnit: DerivedUnit)(implicit numeric: MeasurementOperators[A]): A = as(desiredUnit)(numeric)._value
 
   /**
     * Are the two values exactly the same (same value and units)
     */
   override def equals(obj: Any): Boolean = {
     obj match {
-      case other: Measurement[A] => unit == other.unit && value == other.value
+      case other: Measurement[A] => unit == other.unit && _value == other._value
       case _ => false
     }
   }
@@ -58,12 +65,14 @@ class Measurement[A](val value: A, val unit: DerivedUnit) {
   /**
     * Do the two values represent the same measurement?
     */
-  def =~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = value == other.as(unit).value
+  def =~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = _value == other.as(unit)._value
 
   /**
     * Do two values represent different measurements?
     */
   def !=~(other: Measurement[A])(implicit num: MeasurementOperators[A]): Boolean = !(this =~ other)
+
+  override def toString: String = _value.toString + " " + unit.toString
 }
 
 object Measurement {
