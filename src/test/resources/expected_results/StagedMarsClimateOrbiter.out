@@ -1,0 +1,14 @@
+/*****************************************
+  Emitting Generated Code                  
+*******************************************/
+class Snippet extends ((Double)=>(Double)) {
+def apply(x0:Double): Double = {
+val x1 = x0 * 189.0
+val x2 = x1 / 122.0
+val x3 = x2 * 4.448222
+x3
+}
+}
+/*****************************************
+  End of Generated Code                  
+*******************************************/
