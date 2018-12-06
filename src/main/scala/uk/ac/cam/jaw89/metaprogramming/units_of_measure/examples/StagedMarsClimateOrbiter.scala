@@ -5,12 +5,10 @@ import uk.ac.cam.jaw89.metaprogramming.units_of_measure._
 import uk.ac.cam.jaw89.metaprogramming.units_of_measure.examples.lms_utils._
 
 /**
-  * https://en.wikipedia.org/wiki/Mars_Climate_Orbiter
-  *
-  * The Mars Climate Orbiter crashed in 1999 because one part of the system used pound-force rather than SI newtons to
-  * calculate the impulse that had been created by firing the thrusters
+  * We can improve on the basic MarsClimateOrbiter example by staging it with LMS, so all of the unit checking is
+  * performed at staging time, then the generated code is guaranteed to be free from unit errors but doesn't incur any
+  * overhead to achieve it
   */
-
 object StagedMarsClimateOrbiter {
 
   trait NASA extends Dsl with Utils {

@@ -8,8 +8,9 @@ import uk.ac.cam.jaw89.metaprogramming.units_of_measure.SI._
   *
   * The Mars Climate Orbiter crashed in 1999 because one part of the system used pound-force rather than SI newtons to
   * calculate the impulse that had been created by firing the thrusters
+  *
+  * If only they had used this system instead...
   */
-
 object MarsClimateOrbiter {
 
   /**
@@ -34,23 +35,28 @@ object MarsClimateOrbiter {
     /**
       * Fire the thrusters and return the impulse created
       */
-    def fireThrustersAndCalculateImpulse(): Measurement[Double] = {
-      val thrusterFireDuration = 3.0(s)
+    def fireThrustersAndCalculateImpulse(fireSeconds: Double): Measurement[Double] = {
+      val thrusterFireDuration = fireSeconds(s)
       fireThrusters(thrusterFireDuration)
       thrusterFireDuration * thrusterForce
     }
   }
 
-
-  def main(args: Array[String]): Unit = {
+  def run(fireDuration: Double): Double = {
     val orbiter = new Orbiter
     // Fire the thrusters to correct for some rotation. We want the result in Ns, but will be given it in lbf*s
-    val impulse = orbiter.fireThrustersAndCalculateImpulse()
+    val impulse = orbiter.fireThrustersAndCalculateImpulse(fireDuration)
     // Calculate the orbiter's change in velocity based on the impulse
     val Δv = impulse / orbiter.mass
     // Now record the change in velocity
     // We still get the velocity in ms^-1, regardless of the assumptions that we made about the value returned from
     // the other code
-    printf("The orbiter's velocity was increased by %.1f ms^-1 in the direction of the thruster\n", Δv.value(m/s))
+    Δv.value(m/s)
+  }
+
+
+  def main(args: Array[String]): Unit = {
+    val deltaV = run(3)
+    printf("The orbiter's velocity was increased by %.1f ms^-1 in the direction of the thruster\n", deltaV)
   }
 }

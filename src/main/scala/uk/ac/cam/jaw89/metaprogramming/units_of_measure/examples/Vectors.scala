@@ -41,19 +41,12 @@ object Vectors {
     * A unit-invariant numerical differentiation function - given a list of points, it calculates the rate of change of
     * the value at each time step
     */
-  def differentiate(points: List[Measurement[Vec3[Double]]], interval: Measurement[Double]): List[Measurement[Vec3[Double]]] = {
-    if (points == Nil) Nil
-    else {
-      var prev = points.head
-      var lst = points.tail
-      var result: List[Measurement[Vec3[Double]]] = Nil
-      while (lst != Nil) {
-        val newVal = (lst.head - prev) / interval
-        result ::= newVal
-        prev = lst.head
-        lst = lst.tail
-      }
-      result
+  def differentiate(points: List[Measurement[Vec3[Double]]], interval: Measurement[Double], incomingUnit: Option[DerivedUnit] = None): List[Measurement[Vec3[Double]]] = {
+    points match {
+      case first :: second :: tl =>
+        val unit = incomingUnit.getOrElse(first.unit)
+        ((second.as(unit) - first.as(unit)) / interval) :: differentiate(second::tl, interval, Some(unit))
+      case _ => Nil
     }
   }
 

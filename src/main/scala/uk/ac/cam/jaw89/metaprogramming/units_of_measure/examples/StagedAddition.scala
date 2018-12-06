@@ -9,7 +9,7 @@ object StagedAddition {
     override def snippet(n: Rep[Double]): Rep[Double] = {
       val cm = m * 0.01
       val x = n(m)
-      val y = new Measurement[Rep[Double]](unit(3.0), m)
+      val y = new Measurement[Rep[Double]](unit(32.5), cm)
       (x + y).value(cm)
     }
   }
