@@ -17,6 +17,16 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit) {
   def /(other: Measurement[A])(implicit num: Fractional[A]): Measurement[A] =
     new Measurement[A](num.div(_value, other._value), unit / other.unit)
 
+  // Allow combining varied measurements if they have the necessary operators
+  def +[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B], ime: IntegerMultiplyAndExponentiate[B]): Measurement[A] =
+    new Measurement[A](num.plus(_value, other.as(unit)._value), unit)
+  def -[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B], ime: IntegerMultiplyAndExponentiate[B]): Measurement[A] =
+    new Measurement[A](num.minus(_value, other.as(unit)._value), unit)
+  def *[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B]): Measurement[A] =
+    new Measurement[A](num.times(_value, other._value), unit * other.unit)
+  def /[B](other: Measurement[B])(implicit num: BinaryFractional[A, B]): Measurement[A] =
+    new Measurement[A](num.div(_value, other._value), unit / other.unit)
+
   def ~^(power: Exponent)(implicit num: IntegerMultiplyAndExponentiate[A] with Fractional[A]): Measurement[A] =
     new Measurement[A](num.pow(_value, power), unit ~^ power)
   def ~^-(power: Exponent)(implicit num: IntegerMultiplyAndExponentiate[A] with Fractional[A]): Measurement[A] =
