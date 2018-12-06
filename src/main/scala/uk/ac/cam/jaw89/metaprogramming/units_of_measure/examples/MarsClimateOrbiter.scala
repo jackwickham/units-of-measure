@@ -28,8 +28,7 @@ object MarsClimateOrbiter {
     private val thrusterForce = 189.0(lbf)
 
     private def fireThrusters(duration: Measurement[Double]): Unit = {
-      // Fire the thruster (for 1/10 of the actual time to preserve sanity)
-      Thread.sleep((duration / 10).value(ms).toLong)
+      // Use your imagination!
     }
 
     /**
