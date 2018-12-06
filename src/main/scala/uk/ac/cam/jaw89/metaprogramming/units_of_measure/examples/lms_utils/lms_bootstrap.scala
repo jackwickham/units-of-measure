@@ -1,5 +1,8 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure.examples.lms_utils
 
+// This code is originally from scala.lms.tutorial, in dslapi.scala
+// https://github.com/scala-lms/tutorials/blob/master/src/test/scala/lms/tutorial/dslapi.scala
+
 import scala.lms.common._
 import scala.reflect.SourceContext
 import scala.language.implicitConversions
@@ -17,8 +20,33 @@ abstract class DslDriver[A: Manifest, B: Manifest] extends CompileScala with Dsl
   def snippet(x: Rep[A]): Rep[B]
 }
 
+trait UtilOps extends Base { this: Dsl =>
+  def infix_HashCode[T:Typ](o: Rep[T])(implicit pos: SourceContext): Rep[Long]
+  def infix_HashCode(o: Rep[String], len: Rep[Int])(implicit v: Overloaded1, pos: SourceContext): Rep[Long]
+}
+trait UtilOpsExp extends UtilOps with BaseExp { this: DslExp =>
+  case class ObjHashCode[T:Typ](o: Rep[T])(implicit pos: SourceContext) extends Def[Long] { def m = typ[T] }
+  case class StrSubHashCode(o: Rep[String], len: Rep[Int])(implicit pos: SourceContext) extends Def[Long]
+  def infix_HashCode[T:Typ](o: Rep[T])(implicit pos: SourceContext) = ObjHashCode(o)
+  def infix_HashCode(o: Rep[String], len: Rep[Int])(implicit v: Overloaded1, pos: SourceContext) = StrSubHashCode(o,len)
 
-trait Dsl extends PrimitiveOps with NumericOps with BooleanOps with LiftString with LiftPrimitives with LiftNumeric with LiftBoolean with IfThenElse with Equal with RangeOps with OrderingOps with MiscOps with ArrayOps with StringOps with SeqOps with Functions with While with StaticData with Variables with LiftVariables with ObjectOps /*with UtilOps*/ {
+  override def mirror[A:Typ](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
+    case e@ObjHashCode(a) => infix_HashCode(f(a))(e.m,pos)
+    case e@StrSubHashCode(o,len) => infix_HashCode(f(o),f(len))
+    case _ => super.mirror(e,f)
+  }).asInstanceOf[Exp[A]]
+}
+trait ScalaGenUtilOps extends ScalaGenBase {
+  val IR: UtilOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case ObjHashCode(o) => emitValDef(sym, src"$o.##")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
+
+trait Dsl extends PrimitiveOps with NumericOps with BooleanOps with LiftString with LiftPrimitives with LiftNumeric with LiftBoolean with IfThenElse with Equal with RangeOps with OrderingOps with MiscOps with ArrayOps with StringOps with SeqOps with Functions with While with StaticData with Variables with LiftVariables with ObjectOps with UtilOps {
   implicit def repStrToSeqOps(a: Rep[String]) = new SeqOpsCls(a.asInstanceOf[Rep[Seq[Char]]])
   override def infix_&&(lhs: Rep[Boolean], rhs: => Rep[Boolean])(implicit pos: scala.reflect.SourceContext): Rep[Boolean] =
     __ifThenElse(lhs, rhs, unit(false))
@@ -26,7 +54,7 @@ trait Dsl extends PrimitiveOps with NumericOps with BooleanOps with LiftString w
   def comment[A:Typ](l: String, verbose: Boolean = true)(b: => Rep[A]): Rep[A]
 }
 
-trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt with BooleanOpsExp with IfThenElseExpOpt with EqualExpBridgeOpt with RangeOpsExp with OrderingOpsExp with MiscOpsExp with EffectExp with ArrayOpsExpOpt with StringOpsExp with SeqOpsExp with FunctionsRecursiveExp with WhileExp with StaticDataExp with VariablesExpOpt with ObjectOpsExpOpt /*with UtilOpsExp*/ {
+trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt with BooleanOpsExp with IfThenElseExpOpt with EqualExpBridgeOpt with RangeOpsExp with OrderingOpsExp with MiscOpsExp with EffectExp with ArrayOpsExpOpt with StringOpsExp with SeqOpsExp with FunctionsRecursiveExp with WhileExp with StaticDataExp with VariablesExpOpt with ObjectOpsExpOpt with UtilOpsExp {
   override def boolean_or(lhs: Exp[Boolean], rhs: Exp[Boolean])(implicit pos: SourceContext) : Exp[Boolean] = lhs match {
     case Const(false) => rhs
     case _ => super.boolean_or(lhs, rhs)
@@ -57,8 +85,7 @@ trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt with Bool
     case _ => super.array_apply(x,n)
   }
 
-  // TODO: should this be in LMS?
-  override def isPrimitiveType[T](m: Typ[T]) = (m == manifest[String]) || super.isPrimitiveType(m)
+  override def isPrimitiveType[T](m: Typ[T]) = (m == typ[String]) || super.isPrimitiveType(m)
 }
 
 
@@ -69,7 +96,7 @@ trait DslGen extends ScalaGenNumericOps
   with ScalaGenSeqOps with ScalaGenFunctions with ScalaGenWhile
   with ScalaGenStaticData with ScalaGenVariables
   with ScalaGenObjectOps
-  /*with ScalaGenUtilOps*/ {
+  with ScalaGenUtilOps {
   val IR: DslExp
 
   import IR._

@@ -9,6 +9,9 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "3.0.5" % "test"
 
 initialCommands in console := "import uk.ac.cam.jaw89.metaprogramming.units_of_measure._; import uk.ac.cam.jaw89.metaprogramming.units_of_measure.SI._"
 
+scalacOptions += "-feature"
+scalacOptions += "-deprecation"
+
 // LMS
 scalaOrganization := "org.scala-lang.virtualized"
 
@@ -19,4 +22,3 @@ libraryDependencies += "org.scala-lang.virtualized" % "scala-library" % "2.11.2"
 libraryDependencies += "org.scala-lang.virtualized" % "scala-reflect" % "2.11.2"
 
 scalacOptions += "-Yvirtualize"
-scalacOptions += "-feature"
