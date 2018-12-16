@@ -7,48 +7,51 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
   * @param unit The unit of this measure
   * @tparam A The type of the value
   */
-final class Measurement[A](private val _value: A, val unit: DerivedUnit) {
-  def +(other: Measurement[A])(implicit num: Numeric[A], ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
-    new Measurement[A](num.plus(_value, other.as(unit)._value), unit)
-  def -(other: Measurement[A])(implicit num: Numeric[A], ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
-    new Measurement[A](num.minus(_value, other.as(unit)._value), unit)
+final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implicit ime: IntegerMultiplyAndExponentiate[A]) {
+  def +(other: Measurement[A])(implicit num: Numeric[A]): Measurement[A] =
+    new Measurement[A](num.plus(_value, other.in(unit)._value), unit)
+  def -(other: Measurement[A])(implicit num: Numeric[A]): Measurement[A] =
+    new Measurement[A](num.minus(_value, other.in(unit)._value), unit)
   def *(other: Measurement[A])(implicit num: Numeric[A]): Measurement[A] =
     new Measurement[A](num.times(_value, other._value), unit * other.unit)
   def /(other: Measurement[A])(implicit num: Fractional[A]): Measurement[A] =
     new Measurement[A](num.div(_value, other._value), unit / other.unit)
 
   // Allow combining varied measurements if they have the necessary operators
-  def +[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B], ime: IntegerMultiplyAndExponentiate[B]): Measurement[A] =
-    new Measurement[A](num.plus(_value, other.as(unit)._value), unit)
-  def -[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B], ime: IntegerMultiplyAndExponentiate[B]): Measurement[A] =
-    new Measurement[A](num.minus(_value, other.as(unit)._value), unit)
+  def +[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B]): Measurement[A] =
+    new Measurement[A](num.plus(_value, other.in(unit)._value), unit)
+  def -[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B]): Measurement[A] =
+    new Measurement[A](num.minus(_value, other.in(unit)._value), unit)
   def *[B](other: Measurement[B])(implicit num: BinaryNumeric[A, B]): Measurement[A] =
     new Measurement[A](num.times(_value, other._value), unit * other.unit)
   def /[B](other: Measurement[B])(implicit num: BinaryFractional[A, B]): Measurement[A] =
     new Measurement[A](num.div(_value, other._value), unit / other.unit)
 
-  def ~^(power: Exponent)(implicit num: IntegerMultiplyAndExponentiate[A] with Fractional[A]): Measurement[A] =
-    new Measurement[A](num.pow(_value, power), unit ~^ power)
-  def ~^-(power: Exponent)(implicit num: IntegerMultiplyAndExponentiate[A] with Fractional[A]): Measurement[A] =
+  def ~^(power: Exponent)(implicit num: Fractional[A]): Measurement[A] =
+    new Measurement[A](ime.pow(_value, power), unit ~^ power)
+  def ~^-(power: Exponent)(implicit num: Fractional[A]): Measurement[A] =
     this ~^ (-power)
 
   // Note: <= && >= means =~, not necessarily ==
-  def <(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A] with Numeric[A]): Boolean =
-    num.compare(_value, other.as(unit)._value) < 0
-  def <=(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A] with Numeric[A]): Boolean =
-    num.compare(_value, other.as(unit)._value) <= 0
-  def >(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A] with Numeric[A]): Boolean =
-    num.compare(_value, other.as(unit)._value) > 0
-  def >=(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A] with Numeric[A]): Boolean =
-    num.compare(_value, other.as(unit)._value) >= 0
+  def <(other: Measurement[A])(implicit num: Numeric[A]): Boolean =
+    num.compare(_value, other.in(unit)._value) < 0
+  def <=(other: Measurement[A])(implicit num: Numeric[A]): Boolean =
+    num.compare(_value, other.in(unit)._value) <= 0
+  def >(other: Measurement[A])(implicit num: Numeric[A]): Boolean =
+    num.compare(_value, other.in(unit)._value) > 0
+  def >=(other: Measurement[A])(implicit num: Numeric[A]): Boolean =
+    num.compare(_value, other.in(unit)._value) >= 0
 
   def unary_-(implicit num: Numeric[A]): Measurement[A] = new Measurement[A](num.negate(_value), unit)
 
   /**
     * Do the two values represent the same measurement?
     */
-  def =~(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A]): Boolean = _value == other.as(unit)._value
-  def !=~(other: Measurement[A])(implicit num: IntegerMultiplyAndExponentiate[A]): Boolean = !(this =~ other)
+  def =~(other: Measurement[A]): Boolean = _value == other.in(unit)._value
+  def !=~(other: Measurement[A]): Boolean = !(this =~ other)
+
+  def ===(other: Measurement[A]): Boolean = unit == other.unit && _value == other._value
+  def !==(other: Measurement[A]): Boolean = !(this === other)
 
   /**
     * Convert from to a different unit, with the same dimensionality
@@ -57,12 +60,12 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit) {
     * @return The new Val[A], scaled to the new units
     * @throws DimensionError If the unit has a different dimensionality
     */
-  def as(targetUnit: DerivedUnit)(implicit numeric: IntegerMultiplyAndExponentiate[A]): Measurement[A] = if (unit == targetUnit) {
+  def in(targetUnit: DerivedUnit): Measurement[A] = if (unit == targetUnit) {
     // If units are the same, we're done
     this
   } else if (unit.baseUnits == targetUnit.baseUnits) {
     // If dimensions are the same but units are not, we need to use the ratio between their multiplier
-    new Measurement(numeric.div(numeric.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
+    new Measurement(ime.div(ime.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
     throw UnitConversionException(unit, targetUnit)
   } else {
@@ -70,25 +73,29 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit) {
   }
 
   /**
-    * Alias of as
-    */
-  def in(targetUnit: DerivedUnit)(implicit numeric: IntegerMultiplyAndExponentiate[A]): Measurement[A] = as(targetUnit)(numeric)
-
-  /**
     * Get the value in a particular unit
     *
     * @param desiredUnit The unit that the value should be in
-    * @param numeric Measurement operators to use to calculate the values
     * @return The value, converted to the desired unit
     */
-  def value(desiredUnit: DerivedUnit)(implicit numeric: IntegerMultiplyAndExponentiate[A]): A = as(desiredUnit)(numeric)._value
+  def value(desiredUnit: DerivedUnit): A = in(desiredUnit)._value
 
   /**
-    * Are the two values exactly the same (same value and units)
+    * Do the two values represent the same measurement, after unit conversion?
+    *
+    * This method returns false if the dimensions are different or the units can't be converted. If an exception is
+    * desired instead, use =~, which checks that the two values are equal but throws DimensionError if the dimensions
+    * are different, and UnitConversionException if the units don't have a defined conversion.
+    *
+    * @return Whether this measurement represents the same measure as obj
     */
   override def equals(obj: Any): Boolean = {
     obj match {
-      case other: Measurement[A] => unit == other.unit && _value == other._value
+      case other: Measurement[A] => try {
+          this =~ other
+        } catch {
+          case _: UnitsOfMeasureException => false
+        }
       case _ => false
     }
   }
@@ -99,7 +106,8 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit) {
 object Measurement {
   import scala.language.implicitConversions
 
-  def apply[A](value: A, unit: DerivedUnit): Measurement[A] = new Measurement[A](value, unit)
+  def apply[A](value: A, unit: DerivedUnit)(implicit ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
+    new Measurement[A](value, unit)
 
   /**
     * Implicitly convert a raw value to a dimensionless measurement, so that it can be used
@@ -108,7 +116,8 @@ object Measurement {
     * @tparam A The type of the value
     * @return A dimensionless and unitless Val[A]
     */
-  implicit def convertValueToDimensionlessMeasurement[A](v: A): Measurement[A] = new Measurement[A](v, DerivedUnit.DimensionlessUnit)
+  implicit def convertValueToDimensionlessMeasurement[A](v: A)(implicit ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
+    new Measurement[A](v, DerivedUnit.DimensionlessUnit)
 
   /**
     * Implicitly convert a Numeric[A] to a `Numeric[Measurement[A]]`, with most methods implemented
@@ -118,13 +127,13 @@ object Measurement {
     * @tparam A The value type
     */
   implicit class NumericMeasurementAFromNumericA[A](private val num: Numeric[A])(implicit ime: IntegerMultiplyAndExponentiate[A]) extends Numeric[Measurement[A]] {
-    override def compare(x: Measurement[A], y: Measurement[A]): Int = num.compare(x._value, y.as(x.unit)._value)
+    override def compare(x: Measurement[A], y: Measurement[A]): Int = num.compare(x._value, y.in(x.unit)._value)
 
-    override def minus(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.-(y)(num, ime)
+    override def minus(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.-(y)(num)
 
     override def negate(x: Measurement[A]): Measurement[A] = x.unary_-(num)
 
-    override def plus(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.+(y)(num, ime)
+    override def plus(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.+(y)(num)
 
     override def times(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.*(y)(num)
 

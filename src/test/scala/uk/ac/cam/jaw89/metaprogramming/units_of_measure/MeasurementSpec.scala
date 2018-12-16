@@ -4,17 +4,17 @@ import SI._
 
 class MeasurementSpec extends TestSpec {
   "Measurement.toString" should "strigify the value and unit" in {
-    val v = 100(m/s)
-    assertResult("100 m s^-1") { v.toString }
+    val v = 100.0(m/s)
+    assertResult("100.0 m s^-1") { v.toString }
   }
 
-  "Measurement.equals" should "require the values and arguments to be the same" in {
+  "Measurement.===" should "require the values and arguments to be the same" in {
     val v = 100.0(m/s)
     val km = 1000.0 * m alias "km"
-    assert(v != 0.1(km/s))
-    assert(v != 100.0(km/s))
-    assert(v != 0.1(m/s))
-    assert(v == 100.0(m/s))
+    assert(v !== 0.1(km/s))
+    assert(v !== 100.0(km/s))
+    assert(v !== 0.1(m/s))
+    assert(v === 100.0(m/s))
   }
 
   "Measurement.=~" should "convert units and test for equality" in {
@@ -24,10 +24,37 @@ class MeasurementSpec extends TestSpec {
     assert(v !=~ 100.0(km/s))
   }
 
-  "Measurement.as" should "not do anything if the units are the same" in {
+  it should "throw an exception if the units are inconvertible" in {
+    val v = 100.0(m/s)
+    assertThrows[DimensionError] {
+      v =~ 0.1(m~^2)
+    }
+    assertThrows[DimensionError] {
+      v !=~ 100.0(m~^2)
+    }
+  }
+
+  "Measurement.equals" should "convert units when testing for equality" in {
+    val v = 100.0(m/s)
+    val km = 1000.0 * m
+    assert(v == 0.1(km/s))
+    assert(v != 100.0(km/s))
+  }
+
+  it should "treat inconvertible units as not matching, without throwing an exception" in {
+    val v = 100.0(m/s)
+    assertResult(false) {
+      v == 0.1(m~^2)
+    }
+    assertResult(true) {
+      v != 100.0(m~^2)
+    }
+  }
+
+  "Measurement.in" should "not do anything if the units are the same" in {
     val v = 100.0(m/s)
     assertResult(v) {
-      v as m/s
+      v in m/s
     }
   }
 
@@ -35,7 +62,7 @@ class MeasurementSpec extends TestSpec {
     val mps = m/s alias "mps"
     val v = 100.0(m/s)
     assertResult(100.0(mps)) {
-      v as mps
+      v in mps
     }
   }
 
@@ -44,21 +71,21 @@ class MeasurementSpec extends TestSpec {
     val min = 60.0 * s alias "min"
     val v = 10.0(m/s~^2)
     assertResult(3600000.0(cm/min~^2)) {
-      v as cm/min~^2
+      v in cm/min~^2
     }
   }
 
   it should "throw a UnitConversionException if the dimensions are the same but the units can't be conveted between" in {
     val v = 273.15(K)
     assertThrows[UnitConversionException] {
-      v as Derived.celcius
+      v in Derived.celcius
     }
   }
 
   it should "throw a DimensionError if the dimensions differ" in {
     val v = 100.0(m)
     assertThrows[DimensionError] {
-      v as s
+      v in s
     }
   }
 }

@@ -45,7 +45,7 @@ object Vectors {
     points match {
       case first :: second :: tl =>
         val unit = incomingUnit.getOrElse(first.unit)
-        ((second.as(unit) - first.as(unit)) / interval) :: differentiate(second::tl, interval, Some(unit))
+        ((second.in(unit) - first.in(unit)) / interval) :: differentiate(second::tl, interval, Some(unit))
       case _ => Nil
     }
   }
