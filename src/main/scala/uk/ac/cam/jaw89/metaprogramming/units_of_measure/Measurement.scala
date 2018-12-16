@@ -1,5 +1,7 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
+import scala.reflect.runtime.universe._
+
 /**
   * A value with associated unit
   *
@@ -67,7 +69,7 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     // If dimensions are the same but units are not, we need to use the ratio between their multiplier
     new Measurement(ime.div(ime.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
-    throw UnitConversionException(unit, targetUnit)
+    unit.convert(_value, targetUnit)
   } else {
     throw DimensionError(unit.dimensions, targetUnit.dimensions)
   }

@@ -75,9 +75,9 @@ class MeasurementSpec extends TestSpec {
     }
   }
 
-  it should "throw a UnitConversionException if the dimensions are the same but the units can't be conveted between" in {
+  ignore should "throw a NoUnitConversionsDefinedException if the dimensions are the same but the base units differ and there are no available conversions" in {
     val v = 273.15(K)
-    assertThrows[UnitConversionException] {
+    assertThrows[NoUnitConversionsDefinedException] {
       v in Derived.celcius
     }
   }

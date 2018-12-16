@@ -1,7 +1,6 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
 import uk.ac.cam.jaw89.metaprogramming.units_of_measure.BaseDimensions._
-import uk.ac.cam.jaw89.metaprogramming.units_of_measure.Dimension.Dimensionless
 
 /**
   * Base SI units, as defined in https://en.wikipedia.org/wiki/International_System_of_Units
@@ -38,7 +37,7 @@ object SI {
     val celcius: DerivedUnit = defineUnit("°C", Temperature)
     val lm: DerivedUnit = cd * sr alias "lm"
     val lux: DerivedUnit = lm * m~^-2 alias "lux"
-    val Bq: DerivedUnit = s~^-1 alias "Bq" // or should this be a new base unit?
+    val Bq: DerivedUnit = s~^-1 alias "Bq"
     val Gy: DerivedUnit = J / kg alias "Gy"
     val Sv: DerivedUnit = J / kg alias "Sv"
     val kat: DerivedUnit = mol / s alias "kat"

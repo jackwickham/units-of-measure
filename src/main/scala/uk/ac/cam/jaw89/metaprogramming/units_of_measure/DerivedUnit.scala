@@ -1,5 +1,9 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
+import scala.collection.mutable
+import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
+
 /**
   * A unit is a particular scale of a dimension
   *
@@ -29,7 +33,7 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
   /**
     * Get the dimensions represented by this unit
     */
-  def dimensions: Dimension = units.foldLeft(Dimension.Dimensionless){
+  def dimensions: Dimension = units.foldLeft(BaseDimensions.Dimensionless){
     case (acc, (u, exp)) => acc * (u.dimensions ~^ exp)
   }
 
@@ -56,6 +60,51 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     * @return The new DerivedUnit
     */
   def alias(symbol: String): DerivedUnit = DerivedUnit(PowersOf(new NamedUnit(symbol, baseUnits, baseMultiplier) -> 1))
+
+  /**
+    * A set of defined conversions for this unit
+    *
+    * Map from destination unit to [Map from input type to conversion function]
+    */
+  val definedConversions: mutable.Map[DerivedUnit, mutable.Map[Class[_], _ => _]] = mutable.Map()
+
+  /**
+    * Define a conversion from this unit to `to`
+    *
+    * The units must have the same dimensions
+    *
+    * @param to The unit to convert to
+    * @param convert The conversion function, that takes a value of type ValueType which is a measurement in this unit,
+    *                and returns a value of type ResultType which is a measurement in unit to
+    * @param valueTag A Class for the type of the value being converted from
+    * @tparam ValueType The type being converted from
+    * @tparam ResultType The type being converted to
+    */
+  def defineConversion[ValueType, BoxedValueType <: AnyRef, ResultType]
+                      (to: DerivedUnit, convert: ValueType => ResultType)
+                      (implicit conv: ValueType => BoxedValueType, valueTag: ClassTag[BoxedValueType]): Unit = {
+    if (dimensions != to.dimensions) {
+      throw DimensionError(dimensions, to.dimensions)
+    }
+    definedConversions.getOrElseUpdate(to, mutable.Map()) += (valueTag.runtimeClass -> convert)
+    ()
+  }
+
+  def convert[ValueType, ResultType](value: ValueType, to: DerivedUnit): ResultType = {
+    val availableConversions = definedConversions.get(to) match {
+      case Some(conversions) => conversions
+      case None => // No defined conversion - check if a conversion is even possible
+        if (dimensions == to.dimensions) {
+          throw NoUnitConversionsDefinedException(this, to)
+        } else {
+          throw DimensionError(dimensions, to.dimensions)
+        }
+    }
+    availableConversions.get(value.getClass) match {
+      case Some(conversion) => conversion.asInstanceOf[ValueType => ResultType](value)
+      case None => throw NoCompatibleConversionsException(this, to, value.getClass.getName)
+    }
+  }
 
   override def toString: String = super.toString + (if (multiplier != 1.0) " * " + multiplier else "")
 }

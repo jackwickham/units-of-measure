@@ -7,7 +7,7 @@ import uk.ac.cam.jaw89.metaprogramming.units_of_measure.BaseDimensions.BaseDimen
   *
   * Acceleration is represented by Dimension(Distance -> 1, Time -> -2)
   */
-class Dimension private (_dimensions: PowersOf[BaseDimension]) extends Dimensioned[Dimension, BaseDimension] {
+class Dimension private[units_of_measure] (_dimensions: PowersOf[BaseDimension]) extends Dimensioned[Dimension, BaseDimension] {
   val baseDimensions: PowersOf[BaseDimension] = normalise(_dimensions)
 
   override protected def dimensionMap: PowersOf[BaseDimension] = baseDimensions
@@ -30,11 +30,6 @@ class Dimension private (_dimensions: PowersOf[BaseDimension]) extends Dimension
 
 object Dimension {
   import scala.language.implicitConversions
-
-  /**
-    * Dimensionless values (the base dimensionality)
-    */
-  val Dimensionless: Dimension = new Dimension(PowersOf[BaseDimension]())
 
   /**
     * Implicitly convert BaseDimension to Dimension, to make it easier to use

@@ -23,4 +23,8 @@ object BaseDimensions {
 
   case object LuminousIntensity extends BaseDimension("J")
 
+  /**
+    * Dimensionless values (the base dimensionality)
+    */
+  val Dimensionless: Dimension = new Dimension(PowersOf[BaseDimension]())
 }
