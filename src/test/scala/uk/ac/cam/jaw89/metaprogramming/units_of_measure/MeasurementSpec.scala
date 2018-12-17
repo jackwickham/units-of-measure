@@ -1,6 +1,7 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
 import SI._
+import uk.ac.cam.jaw89.metaprogramming.units_of_measure.BaseDimensions.Length
 
 class MeasurementSpec extends TestSpec {
   "Measurement.toString" should "strigify the value and unit" in {
@@ -75,7 +76,7 @@ class MeasurementSpec extends TestSpec {
     }
   }
 
-  ignore should "throw a NoUnitConversionsDefinedException if the dimensions are the same but the base units differ and there are no available conversions" in {
+  it should "throw a NoUnitConversionsDefinedException if the dimensions are the same but the base units differ and there are no available conversions" in {
     val v = 273.15(K)
     assertThrows[NoUnitConversionsDefinedException] {
       v in Derived.celcius
@@ -86,6 +87,32 @@ class MeasurementSpec extends TestSpec {
     val v = 100.0(m)
     assertThrows[DimensionError] {
       v in s
+    }
+  }
+
+  it should "use DerivedUnit.convert if no implicit conversion is available" in {
+    val a = defineUnit("a", Length)
+    val b = defineUnit("b", Length)
+
+    val v = 9.0(a)
+
+    a.defineConversion(b, (v: Double) => v + 1.0)
+
+    assertResult(10.0(b)) {
+      v in b
+    }
+  }
+
+  it should "handle result type errors with explicit conversions, and throw an exception" in {
+    val a = defineUnit("a", Length)
+    val b = defineUnit("b", Length)
+
+    val v = 9.0(a)
+
+    a.defineConversion(b, (_: Double) => 10)
+
+    assertThrows[IncorrectConversionResultTypeException] {
+      v in b
     }
   }
 }

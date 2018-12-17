@@ -61,6 +61,10 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     * @param targetUnit The unit to convert to
     * @return The new Val[A], scaled to the new units
     * @throws DimensionError If the unit has a different dimensionality
+    * @throws NoUnitConversionsDefinedException If no implicit or explicit conversions to the other unit are available
+    * @throws NoCompatibleConversionsException If no explicit conversions to the other unit for type A are available
+    * @throws IncorrectConversionResultTypeException If an explicit conversion to the other unit was available for type
+    *                                                A, but it returned something other than a subclass of A
     */
   def in(targetUnit: DerivedUnit): Measurement[A] = if (unit == targetUnit) {
     // If units are the same, we're done
@@ -69,7 +73,12 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     // If dimensions are the same but units are not, we need to use the ratio between their multiplier
     new Measurement(ime.div(ime.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
-    unit.convert(_value, targetUnit)
+    try {
+      // TODO: This is unchecked - no cast is performed, because everything gets erased at runtime
+      new Measurement[A](unit.convert(_value, targetUnit), targetUnit)
+    } catch {
+      case e: ClassCastException => throw IncorrectConversionResultTypeException(this.unit, targetUnit, e)
+    }
   } else {
     throw DimensionError(unit.dimensions, targetUnit.dimensions)
   }

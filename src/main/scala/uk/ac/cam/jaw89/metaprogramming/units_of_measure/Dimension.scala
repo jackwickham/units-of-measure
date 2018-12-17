@@ -27,12 +27,3 @@ class Dimension private[units_of_measure] (_dimensions: PowersOf[BaseDimension])
 
   override def hashCode(): Int = baseDimensions.hashCode()
 }
-
-object Dimension {
-  import scala.language.implicitConversions
-
-  /**
-    * Implicitly convert BaseDimension to Dimension, to make it easier to use
-    */
-  implicit def convertBaseDimensionToDimension(baseDimension: BaseDimension): Dimension = new Dimension(baseDimension)
-}

@@ -3,7 +3,7 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 /**
   * General units exception
   */
-abstract class UnitsOfMeasureException(private val message: String = "", private val cause: Throwable = None.orNull) extends RuntimeException(message, cause)
+abstract class UnitsOfMeasureException(private val message: String = "", private val cause: Throwable = null) extends RuntimeException(message, cause)
 
 /**
   * Tried to combine two values that had different dimensions
@@ -15,5 +15,14 @@ case class DimensionError(left: Dimension, right: Dimension) extends UnitsOfMeas
   */
 case class NoUnitConversionsDefinedException(left: DerivedUnit, right: DerivedUnit) extends UnitsOfMeasureException(s"No conversions available to convert from $left to $right (try using alias rather than defineUnit, or use defineConversion)")
 
-case class NoCompatibleConversionsException(leftUnit: DerivedUnit, rightUnit: DerivedUnit, leftType: String)
-  extends UnitsOfMeasureException(s"Conversions are defined for converting from $leftUnit to $rightUnit, but none support converting from values of $leftType")
+/**
+  * There's no conversion from leftUnit to rightUnit that accepts type leftType
+  */
+case class NoCompatibleConversionsException(leftUnit: DerivedUnit, rightUnit: DerivedUnit, leftType: String) extends
+  UnitsOfMeasureException(s"Conversions are defined for converting from $leftUnit to $rightUnit, but none support converting from values of $leftType")
+
+/**
+  * The conversion from leftUnit to rightUnit produced the wrong type
+  */
+case class IncorrectConversionResultTypeException(leftUnit: DerivedUnit, rightUnit: DerivedUnit, cause: Throwable) extends
+  UnitsOfMeasureException(s"A conversion was available when converting from $leftUnit to $rightUnit, but the result had the wrong type", cause)

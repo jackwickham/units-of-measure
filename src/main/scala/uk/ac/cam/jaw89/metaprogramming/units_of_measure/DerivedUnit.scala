@@ -1,7 +1,6 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
 import scala.collection.mutable
-import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
 
 /**
@@ -66,7 +65,7 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     *
     * Map from destination unit to [Map from input type to conversion function]
     */
-  val definedConversions: mutable.Map[DerivedUnit, mutable.Map[Class[_], _ => _]] = mutable.Map()
+  private val definedConversions: mutable.Map[DerivedUnit, mutable.Map[Class[_], _ => _]] = mutable.Map()
 
   /**
     * Define a conversion from this unit to `to`
@@ -79,6 +78,7 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     * @param valueTag A Class for the type of the value being converted from
     * @tparam ValueType The type being converted from
     * @tparam ResultType The type being converted to
+    * @throws DimensionError if the units have different dimensions
     */
   def defineConversion[ValueType, BoxedValueType <: AnyRef, ResultType]
                       (to: DerivedUnit, convert: ValueType => ResultType)
@@ -86,10 +86,33 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     if (dimensions != to.dimensions) {
       throw DimensionError(dimensions, to.dimensions)
     }
+    if (this.eq(to)) {
+      throw new RuntimeException("Can't define a conversion from a unit to itself")
+    }
     definedConversions.getOrElseUpdate(to, mutable.Map()) += (valueTag.runtimeClass -> convert)
     ()
   }
 
+  /**
+    * Convert `value` from this unit to `to`
+    *
+    * An explicit conversion must have been registered in advance to use this method. Most of the time, Measurement.in
+    * is more suitable, because it also performs implicit conversions too.
+    *
+    * The result type often needs to be explicitly specified, because the compiler often infers None rather than Any.
+    * Note that a ClassCastException may be thrown when storing the result if ResultType isn't the correct result type.
+    * Due to type erasure, this can't be checked within the method.
+    *
+    * @param value The value to convert
+    * @param to The DerivedUnit to convert to
+    * @tparam ValueType The type of value
+    * @tparam ResultType The return type
+    * @return The converted value
+    * @throws DimensionError if this and to have different dimensions, and are therefore not possible to convert between
+    * @throws NoUnitConversionsDefinedException if no conversions have been defined between this and to
+    * @throws NoCompatibleConversionsException if a conversion between this and to exists, but none has been declared
+    *                                          that converts from ValueType to any type
+    */
   def convert[ValueType, ResultType](value: ValueType, to: DerivedUnit): ResultType = {
     val availableConversions = definedConversions.get(to) match {
       case Some(conversions) => conversions

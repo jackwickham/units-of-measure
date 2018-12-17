@@ -27,4 +27,12 @@ object BaseDimensions {
     * Dimensionless values (the base dimensionality)
     */
   val Dimensionless: Dimension = new Dimension(PowersOf[BaseDimension]())
+
+
+  import scala.language.implicitConversions
+
+  /**
+    * Implicitly convert BaseDimension to Dimension, to make it easier to use
+    */
+  implicit def convertBaseDimensionToDimension(baseDimension: BaseDimension): Dimension = new Dimension(baseDimension)
 }

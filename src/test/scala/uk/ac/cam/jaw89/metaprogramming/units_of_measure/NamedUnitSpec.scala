@@ -1,7 +1,6 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
 import BaseDimensions._
-import Dimension._
 
 class NamedUnitSpec extends TestSpec {
   "A NamedUnit" should "equal another NamedUnit with the same symbol, base units and multiplier" in {
