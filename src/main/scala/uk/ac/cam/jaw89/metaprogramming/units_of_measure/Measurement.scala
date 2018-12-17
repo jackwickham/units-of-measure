@@ -1,5 +1,7 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
+import scala.reflect.ClassTag
+
 /**
   * A value with associated unit
   *
@@ -58,11 +60,7 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     *
     * @param targetUnit The unit to convert to
     * @return The new Val[A], scaled to the new units
-    * @throws DimensionError If the unit has a different dimensionality
-    * @throws NoUnitConversionsDefinedException If no implicit or explicit conversions to the other unit are available
-    * @throws NoCompatibleConversionsException If no explicit conversions to the other unit for type A are available
-    * @throws IncorrectConversionResultTypeException If an explicit conversion to the other unit was available for type
-    *                                                A, but it returned something other than a subclass of A
+    * @throws UnitsOfMeasureException If no implicit conversion is available
     */
   def in(targetUnit: DerivedUnit): Measurement[A] = if (unit == targetUnit) {
     // If units are the same, we're done
@@ -71,15 +69,7 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     // If dimensions are the same but units are not, we need to use the ratio between their multiplier
     new Measurement(ime.div(ime.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
-    try {
-      val result: A = unit.convert(_value, targetUnit)
-      if (result.isInstanceOf[A]) {
-
-      }
-      new Measurement[A](result, targetUnit)
-    } catch {
-      case e: ClassCastException => throw IncorrectConversionResultTypeException(this.unit, targetUnit, e)
-    }
+    throw NoImplicitConversionsAvailableException(unit, targetUnit)
   } else {
     throw DimensionError(unit.dimensions, targetUnit.dimensions)
   }
@@ -88,6 +78,51 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     * Can this measurement be converted to targetUnit using in and value?
     */
   def canConvertTo(targetUnit: DerivedUnit): Boolean = unit.canConvertTo(targetUnit)
+
+  /**
+    * Use a defined explicit conversion to convert the units
+    *
+    * @param targetUnit The unit to convert to
+    * @param classTag The target value class, to allow type checking
+    * @param ime IME for the result type
+    * @param bConvFw The conversion from B to BBoxed, to allow for type inference of BBoxed
+    * @param bConvBack The conversion from BBoxed to B, to convert the result to the right type
+    * @tparam B Result value type
+    * @tparam BBoxed The boxed version of B (or just B if it's already a reference)
+    * @return The new measurement
+    * @throws DimensionError If the unit has a different dimensionality
+    * @throws NoUnitConversionsDefinedException If no implicit or explicit conversions to the other unit are available
+    * @throws NoCompatibleConversionsException If no explicit conversions to the other unit for type A are available
+    * @throws IncorrectConversionResultTypeException If an explicit conversion to the other unit was available for type
+    *                                                A, but it returned something other than a subclass of A
+    */
+  def convertTo[B, BBoxed <: AnyRef](targetUnit: DerivedUnit)
+                                                      (implicit classTag: ClassTag[BBoxed],
+                                                       ime: IntegerMultiplyAndExponentiate[B],
+                                                       bConvFw: B => BBoxed, bConvBack: BBoxed => B): Measurement[B] = {
+    try {
+      val result = unit.convert[A, BBoxed](_value, targetUnit)
+      if (classTag.runtimeClass.isAssignableFrom(result.getClass)) {
+        new Measurement[B](result, targetUnit)
+      } else {
+        throw IncorrectConversionResultTypeException(unit, targetUnit, classTag.runtimeClass, result.getClass)
+      }
+    } catch {
+      case e: NoUnitConversionsDefinedException =>
+        if (classTag.runtimeClass.isAssignableFrom(_value.getClass)) {
+          // The result type is compatible with A, so in might give us the result we want
+          // Technically measurements are invariant, but for this they are covariant so we can assign A to Measurement[B]
+          try {
+            in(targetUnit).asInstanceOf[Measurement[B]]
+          } catch {
+            // If that failed, pretend it never happened
+            case _: UnitsOfMeasureException => throw e
+          }
+        } else {
+          throw e
+        }
+    }
+  }
 
   /**
     * Get the value in a particular unit

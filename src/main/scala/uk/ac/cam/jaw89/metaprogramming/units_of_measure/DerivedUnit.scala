@@ -88,11 +88,10 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     if (dimensions != to.dimensions) {
       throw DimensionError(dimensions, to.dimensions)
     }
-    if (this.eq(to)) {
+    if (this == to) {
       throw new RuntimeException("Can't define a conversion from a unit to itself")
     }
     definedConversions.getOrElseUpdate(to, mutable.Map()) += (valueTag.runtimeClass -> convert)
-    ()
   }
 
   /**
@@ -116,6 +115,9 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     *                                          that converts from ValueType to any type
     */
   def convert[ValueType, ResultType](value: ValueType, to: DerivedUnit): ResultType = {
+    if (to == this) {
+      return value.asInstanceOf[ResultType]
+    }
     val availableConversions = definedConversions.get(to) match {
       case Some(conversions) => conversions
       case None => // No defined conversion - check if a conversion is even possible
