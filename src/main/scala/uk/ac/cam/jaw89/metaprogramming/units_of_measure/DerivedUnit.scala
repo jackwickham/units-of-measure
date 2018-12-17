@@ -60,6 +60,8 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     */
   def alias(symbol: String): DerivedUnit = DerivedUnit(PowersOf(new NamedUnit(symbol, baseUnits, baseMultiplier) -> 1))
 
+  def canConvertTo(to: DerivedUnit): Boolean = baseUnits == to.baseUnits
+
   /**
     * A set of defined conversions for this unit
     *

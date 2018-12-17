@@ -1,7 +1,5 @@
 package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 
-import scala.reflect.runtime.universe._
-
 /**
   * A value with associated unit
   *
@@ -74,14 +72,22 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     new Measurement(ime.div(ime.times(_value, unit.baseMultiplier), targetUnit.baseMultiplier), targetUnit)
   } else if (unit.dimensions == targetUnit.dimensions) {
     try {
-      // TODO: This is unchecked - no cast is performed, because everything gets erased at runtime
-      new Measurement[A](unit.convert(_value, targetUnit), targetUnit)
+      val result: A = unit.convert(_value, targetUnit)
+      if (result.isInstanceOf[A]) {
+
+      }
+      new Measurement[A](result, targetUnit)
     } catch {
       case e: ClassCastException => throw IncorrectConversionResultTypeException(this.unit, targetUnit, e)
     }
   } else {
     throw DimensionError(unit.dimensions, targetUnit.dimensions)
   }
+
+  /**
+    * Can this measurement be converted to targetUnit using in and value?
+    */
+  def canConvertTo(targetUnit: DerivedUnit): Boolean = unit.canConvertTo(targetUnit)
 
   /**
     * Get the value in a particular unit
