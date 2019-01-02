@@ -1,0 +1,27 @@
+/*****************************************
+  Emitting Generated Code                  
+*******************************************/
+class Snippet extends ((Double)=>(Double)) {
+def apply(x0:Double): Double = {
+val x2 = x0 / 10.0
+val x3 = java.lang.Math.pow(10.0,x2)
+val x4 = java.lang.Math.pow(10.0,0.5)
+val x5 = x3 + x4
+val x6 = java.lang.Math.log10(x5)
+val x7 = 10.0 * x6
+val x1 = java.lang.Math.pow(0.5,6.0)
+val x8 = java.lang.Math.log10(x1)
+val x9 = 10.0 * x8
+val x10 = x7 + x9
+val x11 = x10 / 10.0
+val x12 = java.lang.Math.pow(10.0,x11)
+val x13 = java.lang.Math.pow(10.0,-0.04)
+val x14 = x12 + x13
+val x15 = java.lang.Math.log10(x14)
+val x16 = 10.0 * x15
+x16
+}
+}
+/*****************************************
+  End of Generated Code                  
+*******************************************/
