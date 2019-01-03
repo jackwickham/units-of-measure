@@ -3,7 +3,7 @@ package uk.ac.cam.jaw89.metaprogramming.units_of_measure
 import scala.math.Numeric.DoubleIsFractional
 import scala.math.Ordering.DoubleOrdering
 
-trait IntegerMultiplyAndExponentiate[A] {
+trait MultiplyAndExponentiate[A] {
   def times(x: A, y: Multiplier): A
   def div(x: A, y: Multiplier): A
 
@@ -29,10 +29,10 @@ trait IntegerMultiplyAndExponentiate[A] {
   }
 }
 
-object IntegerMultiplyAndExponentiate {
+object MultiplyAndExponentiate {
 
   /**
     * Provide an instance of MeasurementOperators when using Double
     */
-  implicit object MultiplierIntegerMultiplyAndExponentiate$Double extends DoubleIsFractional with IntegerMultiplyAndExponentiate[Double] with DoubleOrdering
+  implicit object MultiplierIntegerMultiplyAndExponentiate$Double extends DoubleIsFractional with MultiplyAndExponentiate[Double] with DoubleOrdering
 }

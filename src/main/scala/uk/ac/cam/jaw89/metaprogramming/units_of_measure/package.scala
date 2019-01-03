@@ -60,7 +60,7 @@ package object units_of_measure {
     * Extend values to allow them to be applied to a unit, so you can do 100(m) rather than Measurement(100, m)
     */
   implicit class ValueUnitApplication[A](private val a: A) extends AnyVal {
-    def apply(unit: DerivedUnit)(implicit ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] = new Measurement(a, unit)
+    def apply(unit: DerivedUnit)(implicit ime: MultiplyAndExponentiate[A]): Measurement[A] = new Measurement(a, unit)
   }
 
 

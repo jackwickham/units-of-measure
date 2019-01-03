@@ -7,7 +7,7 @@ trait Utils extends Dsl {
   /**
     * `Provide a Fractional[Rep[Double]]` and `IntegerMultiplyAndExponentiate[Rep[Double]]`
     */
-  implicit object RepDblFractional extends Fractional[Rep[Double]] with IntegerMultiplyAndExponentiate[Rep[Double]] {
+  implicit object RepDblFractional extends Fractional[Rep[Double]] with MultiplyAndExponentiate[Rep[Double]] {
     override def fromInt(x: Int): Rep[Double] = unit(x.toDouble)
     override def compare(x: Rep[Double], y: Rep[Double]): Int = throw new UnsupportedOperationException() // Compare needs to return Int, not Rep[Int]
     override def div(x: Rep[Double], y: Rep[Double]): Rep[Double] = x / y

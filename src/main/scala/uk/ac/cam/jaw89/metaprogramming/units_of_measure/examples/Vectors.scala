@@ -13,7 +13,7 @@ object Vectors {
     def componentBinaryOp[A, U](other: Vec3[U], op: (T, U) => A): Vec3[A] = Vec3[A](op(x, other.x), op(y, other.y), op(z, other.z))
   }
   
-  implicit object Vec3DblFractional extends Fractional[Vec3[Double]] with IntegerMultiplyAndExponentiate[Vec3[Double]] {
+  implicit object Vec3DblFractional extends Fractional[Vec3[Double]] with MultiplyAndExponentiate[Vec3[Double]] {
     override def fromInt(x: Int): Vec3[Double] = Vec3(x.toDouble, x.toDouble, x.toDouble)
     override def compare(x: Vec3[Double], y: Vec3[Double]): Int = throw new UnsupportedOperationException()
     override def div(x: Vec3[Double], y: Vec3[Double]): Vec3[Double] = x.componentBinaryOp(y, _ / (_: Double))

@@ -9,7 +9,7 @@ import scala.reflect.ClassTag
   * @param unit The unit of this measure
   * @tparam A The type of the value
   */
-final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implicit ime: IntegerMultiplyAndExponentiate[A]) {
+final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implicit ime: MultiplyAndExponentiate[A]) {
   def +(other: Measurement[A])(implicit num: Numeric[A]): Measurement[A] =
     new Measurement[A](num.plus(_value, other.in(unit)._value), unit)
   def -(other: Measurement[A])(implicit num: Numeric[A]): Measurement[A] =
@@ -98,7 +98,7 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
     */
   def convertTo[B, BBoxed <: AnyRef](targetUnit: DerivedUnit)
                                                       (implicit classTag: ClassTag[BBoxed],
-                                                       ime: IntegerMultiplyAndExponentiate[B],
+                                                       ime: MultiplyAndExponentiate[B],
                                                        bConvFw: B => BBoxed, bConvBack: BBoxed => B): Measurement[B] = {
     try {
       val result = unit.convert[A, BBoxed](_value, targetUnit)
@@ -158,7 +158,7 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
 object Measurement {
   import scala.language.implicitConversions
 
-  def apply[A](value: A, unit: DerivedUnit)(implicit ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
+  def apply[A](value: A, unit: DerivedUnit)(implicit ime: MultiplyAndExponentiate[A]): Measurement[A] =
     new Measurement[A](value, unit)
 
   /**
@@ -168,7 +168,7 @@ object Measurement {
     * @tparam A The type of the value
     * @return A dimensionless and unitless Val[A]
     */
-  implicit def convertValueToDimensionlessMeasurement[A](v: A)(implicit ime: IntegerMultiplyAndExponentiate[A]): Measurement[A] =
+  implicit def convertValueToDimensionlessMeasurement[A](v: A)(implicit ime: MultiplyAndExponentiate[A]): Measurement[A] =
     new Measurement[A](v, DerivedUnit.DimensionlessUnit)
 
   /**
@@ -178,7 +178,7 @@ object Measurement {
     * @param ime An IntegerMultiplyAndExponentiate that is needed for unit conversion
     * @tparam A The value type
     */
-  implicit class NumericMeasurementAFromNumericA[A](private val num: Numeric[A])(implicit ime: IntegerMultiplyAndExponentiate[A]) extends Numeric[Measurement[A]] {
+  implicit class NumericMeasurementAFromNumericA[A](private val num: Numeric[A])(implicit ime: MultiplyAndExponentiate[A]) extends Numeric[Measurement[A]] {
     override def compare(x: Measurement[A], y: Measurement[A]): Int = num.compare(x._value, y.in(x.unit)._value)
 
     override def minus(x: Measurement[A], y: Measurement[A]): Measurement[A] = x.-(y)(num)

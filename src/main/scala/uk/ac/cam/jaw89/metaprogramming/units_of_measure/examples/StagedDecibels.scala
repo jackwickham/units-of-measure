@@ -13,7 +13,7 @@ trait StagedDecibels extends Dsl with Utils {
 
   case class Decibel(v: Rep[Double])
 
-  implicit object DecibelFractional extends Fractional[Decibel] with IntegerMultiplyAndExponentiate[Decibel] with BinaryFractional[Decibel, Decibel] with BinaryNumeric[Decibel, Decibel] {
+  implicit object DecibelFractional extends Fractional[Decibel] with MultiplyAndExponentiate[Decibel] with BinaryFractional[Decibel, Decibel] with BinaryNumeric[Decibel, Decibel] {
     override def fromInt(powerRatio: Int): Decibel = Decibel(unit(10.0) * Math.log10(unit(powerRatio.toDouble)))
     def fromRepDouble(powerRatio: Rep[Double]): Decibel = Decibel(unit(10.0) * Math.log10(powerRatio))
     override def compare(x: Decibel, y: Decibel): Int = throw new UnsupportedOperationException()
