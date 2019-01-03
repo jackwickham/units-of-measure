@@ -41,5 +41,8 @@ object SI {
     val Gy: DerivedUnit = J / kg alias "Gy"
     val Sv: DerivedUnit = J / kg alias "Sv"
     val kat: DerivedUnit = mol / s alias "kat"
+
+    celcius.defineConversion(K, (c: Double) => c + 273.15)
+    K.defineConversion(celcius, (k: Double) => k - 273.15)
   }
 }
