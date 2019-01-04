@@ -4,7 +4,7 @@ import uk.ac.cam.jaw89.metaprogramming.units_of_measure._
 import uk.ac.cam.jaw89.metaprogramming.units_of_measure.SI._
 
 /**
-  * An example showing an alternative datatype for the measurements - a vector3 - and a polymortphic function that acts
+  * An example showing an alternative datatype for the measurements - a vector3 - and a polymorphic function that acts
   * on the values regardless of their type
   */
 object Vectors {
