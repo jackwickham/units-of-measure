@@ -4,9 +4,9 @@ import uk.ac.cam.jaw89.metaprogramming.units_of_measure._
 import uk.ac.cam.jaw89.metaprogramming.units_of_measure.BaseDimensions._
 
 object TemperatureConversion {
-  val C: DerivedUnit = defineUnit("C", Temperature)
+  val C: DerivedUnit = defineUnit("°C", Temperature)
   val K: DerivedUnit = defineUnit("K", Temperature)
-  val F: DerivedUnit = defineUnit("F", Temperature)
+  val F: DerivedUnit = defineUnit("°F", Temperature)
 
   C.defineConversion(K, (c: Double) => c + 273.15)
   K.defineConversion(C, (k: Double) => k - 273.15)

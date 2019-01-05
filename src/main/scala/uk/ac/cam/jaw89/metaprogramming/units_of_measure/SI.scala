@@ -34,7 +34,8 @@ object SI {
     val Wb: DerivedUnit = J / A alias "Wb"
     val T: DerivedUnit = V * s * m~^-2 alias "T"
     val H: DerivedUnit = Ω * s alias "H"
-    val celcius: DerivedUnit = defineUnit("°C", Temperature)
+    val celsius: DerivedUnit = defineUnit("°C", Temperature)
+    val degC: DerivedUnit = celsius
     val lm: DerivedUnit = cd * sr alias "lm"
     val lux: DerivedUnit = lm * m~^-2 alias "lux"
     val Bq: DerivedUnit = s~^-1 alias "Bq"
@@ -42,7 +43,7 @@ object SI {
     val Sv: DerivedUnit = J / kg alias "Sv"
     val kat: DerivedUnit = mol / s alias "kat"
 
-    celcius.defineConversion(K, (c: Double) => c + 273.15)
-    K.defineConversion(celcius, (k: Double) => k - 273.15)
+    celsius.defineConversion(K, (c: Double) => c + 273.15)
+    K.defineConversion(celsius, (k: Double) => k - 273.15)
   }
 }

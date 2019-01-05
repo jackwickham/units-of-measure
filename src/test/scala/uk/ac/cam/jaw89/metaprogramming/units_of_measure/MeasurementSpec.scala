@@ -79,7 +79,7 @@ class MeasurementSpec extends TestSpec {
   it should "throw a NoImplicitConversionsAvailableException if the dimensions are the same but the base units differ" in {
     val v = 273.15(K)
     assertThrows[NoImplicitConversionsAvailableException] {
-      v in Derived.celcius
+      v in Derived.celsius
     }
   }
 
