@@ -8,17 +8,17 @@ class UnitsOfMeasureException(private val message: String = "", private val caus
 /**
   * Tried to combine two values that had different dimensions
   */
-case class DimensionError(left: Dimension, right: Dimension) extends UnitsOfMeasureException(s"Expected a value with dimension $left, but got a value with dimension $right")
+case class DimensionError(left: Dimension, right: Dimension) extends UnitsOfMeasureException(s"Tried to convert value with dimension $left to units with dimension $right (are you missing a multiplication or division by a conversion factor?)")
 
 /**
   * Tried to implicitly convert between two units with different base units but same dimensions
   */
-case class NoImplicitConversionsAvailableException(left: DerivedUnit, right: DerivedUnit) extends UnitsOfMeasureException(s"No implicit conversions are available between $left and $right (try using alias rather than definedUnit, or define an explicit conversion with defineConversion then use convertTo)")
+case class NoImplicitConversionsAvailableException(from: DerivedUnit, to: DerivedUnit) extends UnitsOfMeasureException(s"No implicit conversions are available between $from and $to (try using alias rather than definedUnit, or define an explicit conversion with defineConversion then use convertTo)")
 
 /**
   * Tried to combine two values that had the same dimensions, but weren't compatible
   */
-case class NoUnitConversionsDefinedException(left: DerivedUnit, right: DerivedUnit) extends UnitsOfMeasureException(s"No conversions available to convert from $left to $right (define one with defineConversion)")
+case class NoUnitConversionsDefinedException(from: DerivedUnit, to: DerivedUnit) extends UnitsOfMeasureException(s"No conversions available to convert from $from to $to (define one with defineConversion)")
 
 /**
   * There's no conversion from leftUnit to rightUnit that accepts type leftType
