@@ -32,7 +32,7 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
   /**
     * Get the dimensions represented by this unit
     */
-  def dimensions: Dimension = units.foldLeft(BaseDimensions.Dimensionless){
+  lazy val dimensions: Dimension = units.foldLeft(BaseDimensions.Dimensionless){
     case (acc, (u, exp)) => acc * (u.dimensions ~^ exp)
   }
 

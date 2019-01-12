@@ -21,7 +21,7 @@ class NamedUnit private[units_of_measure] (val symbol: String,
   /**
     * Get the dimensions represented by this unit
     */
-  def dimensions: Dimension = baseUnits.foldLeft(BaseDimensions.Dimensionless){
+  lazy val dimensions: Dimension = baseUnits.foldLeft(BaseDimensions.Dimensionless){
     case (acc, (baseUnit, exp)) => acc * (baseUnit.dimension ~^ exp)
   }
 
