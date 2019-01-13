@@ -60,7 +60,10 @@ final case class DerivedUnit private (units: PowersOf[NamedUnit], multiplier: Mu
     */
   def alias(symbol: String): DerivedUnit = DerivedUnit(PowersOf(new NamedUnit(symbol, baseUnits, baseMultiplier) -> 1))
 
-  def canConvertTo(to: DerivedUnit): Boolean = baseUnits == to.baseUnits
+  def canImplicitlyConvertTo(to: DerivedUnit): Boolean = baseUnits == to.baseUnits
+
+  def canExplicitlyConvertTo(to: DerivedUnit, valueType: Class[_]): Boolean =
+    definedConversions.getOrElse(to, Map[Class[_], _=>_]()).contains(valueType)
 
   /**
     * A set of defined conversions for this unit

@@ -77,7 +77,9 @@ final class Measurement[A](private val _value: A, val unit: DerivedUnit)(implici
   /**
     * Can this measurement be converted to targetUnit using in and value?
     */
-  def canConvertTo(targetUnit: DerivedUnit): Boolean = unit.canConvertTo(targetUnit)
+  def canImplicitlyConvertTo(targetUnit: DerivedUnit): Boolean = unit.canImplicitlyConvertTo(targetUnit)
+
+  def canExplicitlyConvertTo(targetUnit: DerivedUnit): Boolean = unit.canExplicitlyConvertTo(targetUnit, _value.getClass)
 
   /**
     * Use a defined explicit conversion to convert the units
