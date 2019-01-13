@@ -43,9 +43,12 @@ object Vectors {
     */
   def differentiate(points: List[Measurement[Vec3[Double]]], interval: Measurement[Double], incomingUnit: Option[DerivedUnit] = None): List[Measurement[Vec3[Double]]] = {
     points match {
-      case first :: second :: tl =>
+      case first :: second :: tl => {
         val unit = incomingUnit.getOrElse(first.unit)
-        ((second.in(unit) - first.in(unit)) / interval) :: differentiate(second::tl, interval, Some(unit))
+        val delta: Measurement[Vec3[Double]] = second.in(unit) - first.in(unit)
+        val rateOfChange = delta / interval // Heterogeneous division
+        rateOfChange :: differentiate(second :: tl, interval, Some(unit))
+      }
       case _ => Nil
     }
   }
